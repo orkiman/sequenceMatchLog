@@ -1,0 +1,4 @@
+version 1 :
+working fetures : sequenceCheck , inFileCheck , matchCheck (no cells)
+todo : matchCheck by cells , log ,clean gui..
+todo? : cofiguration gui
