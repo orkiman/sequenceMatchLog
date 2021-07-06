@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--   Configuration status= log4j2 internal status logging level. keep it warn-->
+<Configuration status="warn">
+    <Properties>
+        <Property name="logFileName">empty file</Property>
+    </Properties>
+    <Appenders>
+        <Console name="LogToConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        <File name="LogToFile" fileName="${sys:logFileName}">
+            <PatternLayout>
+                <Pattern>%m :: %d{HH:mm:ss,SSS dd.MM.yyyy}%n</Pattern>
+            </PatternLayout>
+        </File>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="LogToFile" level="info"/>
+            <AppenderRef ref="LogToConsole" level="warn"/>
+        </Root>
+    </Loggers>
+</Configuration>

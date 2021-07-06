@@ -1,11 +1,15 @@
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.apache.commons.lang3.ArrayUtils;
 import org.ini4j.Wini;
 
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * use this file as a serial template
@@ -19,9 +23,13 @@ public class Serial {
     String serialName;
     char stxChar, etxChar;
     String bufferedMassage = "";
+    Manager manager;
+    ArrayList<Byte> bufferedMassageList;
 //    SerialPort port;
 
-    public Serial(String serialName) throws IOException {
+    public Serial(String serialName,Manager manager) throws IOException {
+        bufferedMassageList = new ArrayList<>();
+        this.manager=manager;
         this.serialName = serialName;
         Wini ini = new Wini(new File("serial.ini"));
         int baudrate = ini.get(serialName, "baudrate", int.class);
@@ -67,6 +75,8 @@ public class Serial {
             @Override
             public void serialEvent(SerialPortEvent event) {
                 byte[] newData = event.getReceivedData();
+//                processDataAsList(newData);
+
                 bufferedMassage += new String(newData);
 //                System.out.println(Arrays.toString(newData));
                 int etxIndex;
@@ -85,9 +95,39 @@ public class Serial {
         });
     }
 
+//    private void processDataAsList(byte[] newData){
+//        bufferedMassageList.addAll(Arrays.asList(ArrayUtils.toObject(newData)));
+//        byte stx=2;
+//        byte etx=3;
+//        int etxIndex;
+//        do {
+//            int stxIndex = bufferedMassageList.indexOf(stx);
+//            etxIndex = bufferedMassageList.indexOf(etx);
+//            System.out.println("stx = " + stxIndex);
+//            System.out.println("etx = " + etxIndex);
+//
+////            process complete massages
+//            if (etxIndex != -1) {
+//                if (stxIndex != -1 && etxIndex > stxIndex) {
+//                    List<Byte> completeMassageList = bufferedMassageList.subList(stxIndex + 1, etxIndex);
+//                    System.out.println(completeMassageList);
+////                    ArrayList<Byte> completeMassageList = (ArrayList<Byte>) bufferedMassageList.subList(stxIndex + 1, etxIndex);
+//                    processCompleteMassage(completeMassageList);
+//                }
+//                bufferedMassageList.subList(0, etxIndex+1).clear();
+////                bufferedMassage = bufferedMassage.substring(etxIndex + 1);
+//            }
+//        } while (etxIndex != -1);
+//    }
+//    private void processCompleteMassage(List<Byte> completeMasssage){
+//        System.out.println(completeMasssage);
+//        manager.serialEvent(serialName,completeMasssage);
+//    }
     private void processCompleteMassage(String completeMassage) {
 //        pay attention to concurrecy !!!
-        System.out.println(Thread.currentThread().getName() + " :" + completeMassage + ".");
+        System.out.println(Thread.currentThread().getName()+" - " + serialName + " :" + completeMassage + ".");
+        System.out.println("completeMassage.length: " + completeMassage.length());
+        manager.serialEvent(serialName,completeMassage);
     }
     public void writeBytes(byte[] data){
         port.writeBytes(data,data.length);

@@ -1,3 +1,7 @@
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -33,12 +37,15 @@ public class SequenceMatchLogGui {
     private JLabel maxNoReadLable;
     private JTextField fileTextField;
     private JButton chooseFileButton;
+    private JCheckBox startWithOneCheckBox;
     String reader1Name, reader2Name;
     private HashSet<String> errorsBarcodes;
     private Manager manager;
 
-    public SequenceMatchLogGui() throws IOException {
+    private static Logger logger = LogManager.getLogger("Gui");
 
+    public SequenceMatchLogGui() throws IOException {
+//        logger.warn ("ho");
 //        init errorBarcodes set :
         errorsBarcodes = new HashSet<>();
         errorsBarcodes.add(PropertiesHandler.getProperty("noReadString", "noRead"));
@@ -47,11 +54,12 @@ public class SequenceMatchLogGui {
         reader2Name = "reader2";//PropertiesHandler.getProperty("reader2Name", "reader2");
         DefaultTableModel model = (DefaultTableModel) table1.getModel();
         model.setColumnCount(3);
+//        model.setRowCount(3);doesn't work//'
 //        set columns names
         table1.getColumnModel().getColumn(0).setHeaderValue(reader1Name);
         table1.getColumnModel().getColumn(1).setHeaderValue(reader2Name);
         table1.getColumnModel().getColumn(2).setHeaderValue("time");
-        table1.setRowHeight(Integer.parseInt(PropertiesHandler.getProperty("fontSize","30")));
+        table1.setRowHeight(Integer.parseInt(PropertiesHandler.getProperty("fontSize", "30")));
 //        "noRead"" will be red
 //        table1.setDefaultRenderer(Object.class, new StatusColumnCellRenderer());
         StatusColumnCellRenderer statusColumnCellRenderer = new StatusColumnCellRenderer();
@@ -60,9 +68,10 @@ public class SequenceMatchLogGui {
 //        set checkboxs:
 //        reader1SequenceCheckCheckBox.setText(reader1Name + " sequence check");
         reader1SequenceCheckCheckBox.setSelected(PropertiesHandler.getProperty("reader1SequenceCheck", "true").equals("true"));
-        inFileCheckBox.setSelected(PropertiesHandler.getProperty("inFileCheck","false").equals("true"));
+        inFileCheckBox.setSelected(PropertiesHandler.getProperty("inFileCheck", "false").equals("true"));
 //        reader2ActiveCheckBox.setText(reader2Name + " active");
         reader2ActiveCheckBox.setSelected(PropertiesHandler.getProperty("reader2Active", "true").equals("true"));
+        startWithOneCheckBox.setSelected(PropertiesHandler.getProperty("barcodeStartWithOne", "true").equals("true"));
         manager = new Manager(this);
         directionLable.setText(PropertiesHandler.getProperty("ascending", "false").equals("true") ? "כיוון עולה" : "כיוון יורד");
         maxNoReadLable.setText("חוסר קריאה מותר : " + PropertiesHandler.getProperty("maxNoReadAllowed", "0"));
@@ -70,10 +79,12 @@ public class SequenceMatchLogGui {
         SimpleAttributeSet attribs = new SimpleAttributeSet();
         StyleConstants.setAlignment(attribs, StyleConstants.ALIGN_RIGHT);
         massagesTextPane.setParagraphAttributes(attribs, false);
-        fileTextField.setText(new File(PropertiesHandler.getProperty("file","")).getName());
+        fileTextField.setText(new File(PropertiesHandler.getProperty("file", "")).getName());
         if (inFileCheckBox.isSelected())
-            manager.fillBarcodesSet(PropertiesHandler.getProperty("file",""));
-
+            manager.fillBarcodesSet(PropertiesHandler.getProperty("file", ""));
+        setLogFileName(fileTextField.getText());
+//        add first empty row
+        addNewEmptyRowToTable();
 
 
         reader1SequenceCheckCheckBox.addActionListener(new ActionListener() {
@@ -118,7 +129,13 @@ public class SequenceMatchLogGui {
             @Override
             public void actionPerformed(ActionEvent e) {
                 resizeColumnWidth(table1);
+//                logger.warn ("ho");
+//                manager.serialEvent("io", "512");//rising
+//                manager.serialEvent("io", "0");//falling
+
             }
+
+
         });
 
         inFileCheckBox.addActionListener(new ActionListener() {
@@ -127,14 +144,14 @@ public class SequenceMatchLogGui {
                 try {
                     PropertiesHandler.setProperty("inFileCheck", String.valueOf(inFileCheckBox.isSelected()));
                     if (inFileCheckBox.isSelected())
-                        manager.fillBarcodesSet(PropertiesHandler.getProperty("file",""));
+                        manager.fillBarcodesSet(PropertiesHandler.getProperty("file", ""));
+                    setLogFileName(fileTextField.getText());
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
                 }
             }
         });
     }
-
 
 
     public void addToErrorsSet(String barcode) {
@@ -149,27 +166,27 @@ public class SequenceMatchLogGui {
         SimpleAttributeSet attributeSet = new SimpleAttributeSet();
 //        StyleConstants.setFontSize(attributeSet, 20);
         try {
-            massagesTextPane.getStyledDocument().insertString(0, massage, attributeSet);
+            massagesTextPane.getStyledDocument().insertString(0, massage+System.lineSeparator(), attributeSet);
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
         massagesTextPane.setCaretPosition(0);
     }
 
-    private void addRow(DefaultTableModel model, String reader1, String Reader2) {
-        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss:SSS");
-        Date date = new Date();
-        String dateAndTime = formatter.format(date);
-        String[] data = new String[]{reader1, Reader2, dateAndTime};
-        model.addRow(data);
-    }
+//    private void addRow(DefaultTableModel model, String reader1, String Reader2) {
+//        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss:SSS");
+//        Date date = new Date();
+//        String dateAndTime = formatter.format(date);
+//        String[] data = new String[]{reader1, Reader2, dateAndTime};
+//        model.addRow(data);
+//    }
 
     public void updateRow0(String readerName, String data) {
 
         DefaultTableModel model = (DefaultTableModel) table1.getModel();
         int column = table1.getColumnModel().getColumnIndex(readerName);
-        if (!model.getValueAt(0, column).equals("")) //the cell is not empty - this happen only if read without trigger received...
-            model.insertRow(0, new String[]{"", "", ""});
+//        if (!model.getValueAt(0, column).equals("")) //the cell is not empty - this happen only if read without trigger received...
+//            model.insertRow(0, new String[]{"", "", ""});
         model.setValueAt(data, 0, column);
     }
 
@@ -179,6 +196,10 @@ public class SequenceMatchLogGui {
         String dateAndTime = formatter.format(date);
         String[] data = new String[]{"", "", dateAndTime};
         ((DefaultTableModel) table1.getModel()).insertRow(0, data);
+    }
+
+    public boolean isStartWithOne() {
+        return startWithOneCheckBox.isSelected();
     }
 
     public class StatusColumnCellRenderer extends DefaultTableCellRenderer {
@@ -202,7 +223,7 @@ public class SequenceMatchLogGui {
     }
 
     private void chooseFile() throws IOException {
-        String filePath = PropertiesHandler.getProperty("file","");
+        String filePath = PropertiesHandler.getProperty("file", "");
 //        JFileChooser chooser = new JFileChooser(filePath);
         JFileChooser chooser = new JFileChooser(filePath);//"s://plus");
         chooser.setPreferredSize(new Dimension(700, 500));
@@ -234,16 +255,16 @@ public class SequenceMatchLogGui {
             File f = new File(filePath);
             if (f.exists() && !f.isDirectory()) {
                 String fileName = chooser.getSelectedFile().getName();
-                System.out.println("filePath: "+ filePath);
-                System.out.println("fileName: "+ fileName);
-                PropertiesHandler.setProperty("file",filePath);
+                System.out.println("filePath: " + filePath);
+                System.out.println("fileName: " + fileName);
+                PropertiesHandler.setProperty("file", filePath);
 //                storeLastConfiguration("filePath", filePath);
 //                storeLastConfiguration("fileName", fileName);
                 fileTextField.setText(fileName);
                 manager.fillBarcodesSet(filePath);
 //                runButton.setEnabled(true);
 //                rprButton.setEnabled(true);
-
+                setLogFileName(fileTextField.getText());
             } else {
                 JOptionPane.showMessageDialog(null, "choose again", "  file not found ", JOptionPane.INFORMATION_MESSAGE);
                 chooseFile();
@@ -251,6 +272,25 @@ public class SequenceMatchLogGui {
         }
     }
 
+    private void setLogFileName(String logFileName) {
+//        if not working with file - set file name to this month.year
+//        all files will append massages
+//        set log file name
+        if (inFileCheckBox.isSelected()) {  // log file name is working file name
+            System.setProperty("logFileName", logFileName+".log");
+        } else { // log file name by month (MM-YYYY)
+            System.setProperty("logFileName", new SimpleDateFormat("MM-yyyy").format(new Date())+".log");
+        }
+        org.apache.logging.log4j.core.LoggerContext ctx =
+                (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+        ctx.reconfigure();
+    }
+
+    //    try {
+//        ProviderRegistry.getLoggingProvider().shutdown();
+//    } catch (InterruptedException e) {
+//        e.printStackTrace();
+//    }
     private void modifyFilter(JFileChooser chooser, JTextField tf) {
         final String text = tf.getText();
         chooser.setFileFilter(new FileFilter() {
@@ -258,6 +298,7 @@ public class SequenceMatchLogGui {
             public String getDescription() {
                 return text;
             }
+
             @Override
             public boolean accept(File f) {
                 return (f.isDirectory() || f.getName().toLowerCase().startsWith(text.toLowerCase()));
@@ -272,6 +313,7 @@ public class SequenceMatchLogGui {
     public boolean isReader2Active() {
         return reader2ActiveCheckBox.isSelected();
     }
+
     public boolean isReader1FileCheckActive() {
         return inFileCheckBox.isSelected();
     }
@@ -283,28 +325,32 @@ public class SequenceMatchLogGui {
             for (int row = 0; row < table.getRowCount(); row++) {
                 TableCellRenderer renderer = table.getCellRenderer(row, column);
                 Component comp = table.prepareRenderer(renderer, row, column);
-                width = Math.max(comp.getPreferredSize().width +1 , width);
+                width = Math.max(comp.getPreferredSize().width + 1, width);
             }
-            if(width > 300)
-                width=300;
+            if (width > 300)
+                width = 300;
             columnModel.getColumn(column).setPreferredWidth(width);
         }
     }
+
     public static void main(String[] args) throws IOException {
-        setUIFont (new javax.swing.plaf.FontUIResource("Serif",Font.PLAIN,Integer.parseInt(PropertiesHandler.getProperty("fontSize","30"))));
-        JFrame frame = new JFrame("sequenceMatchLogGui");
+        setUIFont(new javax.swing.plaf.FontUIResource("Serif", Font.PLAIN, Integer.parseInt(PropertiesHandler.getProperty("fontSize", "30"))));
+        JFrame frame = new JFrame("sequenceMatchLogGuiCmc250");
         frame.setContentPane(new SequenceMatchLogGui().panel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
+//        frame.pack();
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+//        frame.setUndecorated(true);
         frame.setVisible(true);
     }
-    public static void setUIFont (javax.swing.plaf.FontUIResource f){
+
+    public static void setUIFont(javax.swing.plaf.FontUIResource f) {
         java.util.Enumeration keys = UIManager.getDefaults().keys();
         while (keys.hasMoreElements()) {
             Object key = keys.nextElement();
-            Object value = UIManager.get (key);
+            Object value = UIManager.get(key);
             if (value instanceof javax.swing.plaf.FontUIResource)
-                UIManager.put (key, f);
+                UIManager.put(key, f);
         }
     }
 
