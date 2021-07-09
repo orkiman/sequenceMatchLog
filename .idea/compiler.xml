@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="sequenceMatchLogTemplate" />
         <module name="sequenceMatchLogV2_250" />
+        <module name="sequenceMatchLogV2" />
       </profile>
     </annotationProcessing>
   </component>

@@ -130,7 +130,7 @@ public class SequenceMatchLogGui {
             public void actionPerformed(ActionEvent e) {
                 resizeColumnWidth(table1);
 //                logger.warn ("ho");
-//                manager.serialEvent("io", "512");//rising
+//                manager.serialEvent("io", "128");//rising
 //                manager.serialEvent("io", "0");//falling
 
             }
